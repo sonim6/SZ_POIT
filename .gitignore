@@ -1,0 +1,5 @@
+#virtualne prostredie
+.venv/
+
+#kompilovane subory
+__pycache__/
