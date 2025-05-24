@@ -2,18 +2,6 @@ import serial as pyserial_module # <<< ZMENA: Importujeme 'serial' ako 'pyserial
 import time
 import threading
 
-# --- Diagnostika ---
-print(f"DEBUG (arduino_reader.py - top level): Typ importovaného aliasu 'pyserial_module': {type(pyserial_module)}")
-try:
-    if hasattr(pyserial_module, 'Serial'):
-        print(f"DEBUG (arduino_reader.py - top level): 'pyserial_module.Serial' existuje, typ: {type(pyserial_module.Serial)}")
-    else:
-        print(f"DEBUG (arduino_reader.py - top level): modul cez alias 'pyserial_module' NEMÁ atribút 'Serial'!")
-except Exception as e_debug_top:
-    print(f"DEBUG (arduino_reader.py - top level): Chyba pri zisťovaní atribútov 'pyserial_module': {e_debug_top}")
-# --- Koniec diagnostiky ---
-
-
 # --- Nastavenia ---
 SERIAL_PORT = '/dev/ttyACM0'  # <<<---- ZMEŇ PODĽA SVOJHO PORTU!
 BAUD_RATE = 9600
