@@ -1,16 +1,34 @@
 document.addEventListener('DOMContentLoaded', function() {
     const socket = new WebSocket("ws://localhost:8000/ws");
 
-    // Správne získanie referencií na HTML elementy
+    //Správne získanie referencií na HTML elementy
     const tempValueElement = document.getElementById("tempValue"); // Lepší názov pre prehľadnosť
     const humValueElement = document.getElementById("humValue");   // Toto je KLÚČOVÁ OPRAVA! Pôvodne si mal opäť "tempValue"
 
-    // Získaj kontexty pre plátna grafov
+    //Ziskanie elementov pre umiestnenie grafov
     const tempCtx = document.getElementById('tempChart').getContext('2d');
     const humCtx = document.getElementById('humChart').getContext('2d');
-    const tempGaugeCtx = document.getElementById('tempGauge').getContext('2d');
-    const humGaugeCtx = document.getElementById('humGauge').getContext('2d');
+    
+    //Vytvorenie cifernika pre teplotu
+    const tempGauge = new JustGage({
+        id: "tempGauge",
+        value: 0,
+        min: -20,
+        max: 50,
+        title: "°C",
+        label: "Teplota",
+        levelColors: ["#00ccff", "#f9c802", "#ff0000"]
+    });
 
+    const humGauge = new JustGage({
+        id: "humGauge",
+        value: 0,
+        min: 0,
+        max: 100,
+        title: "%",
+        label: "Vlhkosť",
+        levelColors: ["#d4f0ff", "#90caf9", "#2962ff"]
+    });
     // --- Inicializácia Grafov Chart.js ---
     const tempChart = new Chart(tempCtx, {
         type: 'line',
@@ -66,46 +84,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       });
 
-    // Inicializácia Gauge
-    // Musíme si uložiť referencie na inštancie Chart.js pre gauge, aby sme ich mohli neskôr aktualizovať
-    let tempGaugeChart = createGauge(tempGaugeCtx, 0, 50, 'red'); // Predpokladaná max teplota 50
-    let humGaugeChart = createGauge(humGaugeCtx, 0, 100, 'blue'); // Predpokladaná max vlhkosť 100
-
-    // Funkcia pre vytváranie/aktualizáciu Gauge
-    function createGauge(ctx, value, max, color) {
-        // Zničí existujúci Chart na danom kontexte, ak existuje, predtým ako vytvoríme nový
-        if (Chart.getChart(ctx)) {
-            Chart.getChart(ctx).destroy();
-        }
-
-        return new Chart(ctx, { // Vrátime inštanciu Chart, aby sme ju mohli uložiť
-            type: 'doughnut',
-            data: {
-                labels: ['Hodnota', 'Zostatok'],
-                datasets: [{
-                    data: [value, max - value],
-                    backgroundColor: [color, '#e9ecef'],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                circumference: 180,
-                rotation: 270,
-                cutout: '70%',
-                plugins: {
-                    legend: { display: false },
-                    tooltip: { enabled: false }
-                }
-            }
-        });
-    }
+    
     
     // Spracovanie prijatých dát z WebSockety
     socket.onmessage = function(event) {
         const data = JSON.parse(event.data);
         const temperature = data.temperature; // Ulož do lokálnej premennej pre ľahšie použitie
         const humidity = data.humidity;       // Ulož do lokálnej premennej pre ľahšie použitie
-
+        
         // 1. Aktualizácia textových hodnôt
         tempValueElement.innerText = temperature + "°C";
         humValueElement.innerText = humidity + "%";
@@ -132,10 +118,7 @@ document.addEventListener('DOMContentLoaded', function() {
         humChart.data.datasets[0].data.push(humidity);
         humChart.update(); // Prekresli graf
 
-        // 3. Aktualizácia Gauge
-        // Znič starý gauge a vytvor nový s aktualizovanou hodnotou
-        tempGaugeChart = createGauge(tempGaugeCtx, temperature, 50, 'red'); // Max hodnota pre teplotu
-        humGaugeChart = createGauge(humGaugeCtx, humidity, 100, 'blue'); // Max hodnota pre vlhkosť
-
-        };
+        tempGauge.refresh(temperature);
+        humGauge.refresh(humidity);
+    }
 });

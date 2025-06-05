@@ -5,23 +5,91 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Monitorovanie teploty a vlhkosti</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Chart.js knižnica -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- date-fns a adaptér pre Chart.js (ak používate časovú os) -->
+  <script src="https://cdn.jsdelivr.net/npm/date-fns"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+  <!--JustGage kniznica-->
+  <script src="https://cdn.jsdelivr.net/npm/raphael@2.3.0/raphael.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/justgage@1.3.5/justgage.min.js"></script>
+  <!--Externy JS subor-->
   <script type="text/javascript" src="{{ url_for('static', path='commucation.js') }}"></script>
+  <script type="text/javascript" src="{{ url_for('static', path='monitoring_status.js') }}"></script>
+  <script type="text/javascript" src="{{ url_for('static', path='saving_handler.js') }}"></script>
 
   <style>
     body {
-      background-color: #f8f9fa;
+      font-family: 'Inter', sans-serif; /* Použitie Inter fontu */
+      background-color: #f8f9fa; /* Svetlé pozadie pre lepší kontrast */
+      color: #333; /* Tmavšia farba textu pre lepšiu čitateľnosť */
     }
     .card {
-      border-radius: 1rem;
-      box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.1);
-    } 
+      border-radius: 0.75rem; /* Mierne zaoblené rohy pre modernejší vzhľad */
+      box-shadow: 0 0.25rem 0.75rem rgba(0,0,0,0.08); /* Jemnejší tieň */
+      border: none; /* Odstránenie predvoleného okraja karty */
+      margin-bottom: 1.5rem; /* Väčší odstup medzi kartami */
+    }
+    .card-title {
+      font-weight: 600; /* Polotučné nadpisy kariet */
+      color: #495057; /* Neutrálna farba nadpisov */
+    }
+    .display-4 {
+        font-weight: 700; /* Tučnejšie číselné hodnoty */
+    }
+    .text-danger {
+        color: #e53e3e !important; /* Výraznejšia červená */
+    }
+    .text-primary {
+        color: #3182ce !important; /* Výraznejšia modrá */
+    }
+    .gauge-container { /* Kontajner pre lepšie centrovanie gauge */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 200px; /* Alebo podľa potreby */
+        position: relative; /* Pre prípadné absolútne pozicovanie textu v strede */
+    }
+    .gauge {
+        max-width: 100%;
+        max-height: 100%;
+    }
+    h1.text-center {
+        font-weight: 700; /* Tučnejší hlavný nadpis */
+        color: #2c3e50; /* Tmavomodrý nadpis */
+    }
+
+    /* Responzivita pre menšie obrazovky */
+    @media (max-width: 768px) {
+      .display-4 {
+        font-size: 2.5rem; /* Menšie písmo pre číselné hodnoty na mobiloch */
+      }
+      .card-title {
+        font-size: 1.1rem; /* Menšie nadpisy kariet */
+      }
+      .gauge-container {
+        height: 150px; /* Menšia výška pre gauge na mobiloch */
+      }
+    }
   </style>
 </head>
 <body>
   <div class="container py-5">
     <h1 class="text-center mb-4">Monitorovanie prostredia</h1>
+    <div class="row mb-4 align-items-center">
+  <div class="col-md-6 d-flex justify-content-center">
+    <button id="startButton" class="btn btn-success me-2">Štart</button>
+    <button id="stopButton" class="btn btn-danger">Stop</button>
+  </div>
 
+  <div class="col-md-6 d-flex justify-content-center">
+    <select id="storageOption" class="form-select form-select-sm w-auto me-2">
+      <option value="file">Súbor</option>
+      <option value="database">Databáza</option>
+    </select>
+    <button id="saveButton" class="btn btn-primary btn-sm">Ukladať</button>
+  </div>
+</div>
     <div class="row g-4 mb-4">
       <div class="col-md-6">
         <div class="card text-center">
@@ -44,7 +112,7 @@
       <div class="col-md-6">
         <div class="card">
           <div class="card-body">
-            <h5 class="card-title">Graf teploty</h5>
+            <h5 class="card-title text-center">Graf teploty</h5>
             <canvas id="tempChart"></canvas>
           </div>
         </div>
@@ -52,7 +120,7 @@
       <div class="col-md-6">
         <div class="card">
           <div class="card-body">
-            <h5 class="card-title">Graf vlhkosti</h5>
+            <h5 class="card-title text-center">Graf vlhkosti</h5>
             <canvas id="humChart"></canvas>
           </div>
         </div>
@@ -63,16 +131,20 @@
       <div class="col-md-6">
         <div class="card">
           <div class="card-body">
-            <h5 class="card-title">Gauge teploty</h5>
-            <canvas id="tempGauge" class="gauge"></canvas>
+            <h5 class="card-title text-center">Cifernik teploty</h5>
+            <div class="gauge-container">
+              <div id="tempGauge" class="gauge" style="width:100%; height:180px;"></div>
+            </div>
           </div>
         </div>
       </div>
       <div class="col-md-6">
         <div class="card">
           <div class="card-body">
-            <h5 class="card-title">Gauge vlhkosti</h5>
-            <canvas id="humGauge" class="gauge"></canvas>
+            <h5 class="card-title text-center">Cifernik vlhkosti</h5>
+            <div class="gauge-container">
+              <div id="humGauge" class="gauge" style="width:100%; height:180px;"></div>
+            </div>
           </div>
         </div>
       </div>
