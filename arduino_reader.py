@@ -1,16 +1,18 @@
-import serial as pyserial_module # <<< ZMENA: Importujeme 'serial' ako 'pyserial_module'
+import serial as pyserial_module 
 import time
 import threading
 
-# --- Nastavenia ---
-SERIAL_PORT = '/dev/ttyACM0'  # <<<---- ZMEŇ PODĽA SVOJHO PORTU!
+#Nastavenia
+SERIAL_PORT = '/dev/ttyACM0'  
 BAUD_RATE = 9600
 
+#Globalne premenne
 latest_humidity = None
 latest_temperature = None
 stop_reading_flag = threading.Event()
 serial_thread = None
 
+#Funkcia pre spracovanie dat prichadzajucich z arduina
 def parse_arduino_data(line):
     global latest_humidity, latest_temperature
     try:
@@ -27,6 +29,7 @@ def parse_arduino_data(line):
         pass
     return False
 
+#Slucka pre neustale citane dat z arduina 
 def _continuous_read_loop():
     global latest_humidity, latest_temperature
     ser_connection = None
@@ -35,16 +38,16 @@ def _continuous_read_loop():
 
     while not stop_reading_flag.is_set():
         try:
-            # --- Diagnostika pred použitím pyserial_module.Serial ---
+           #Diagnostika
             print(f"DEBUG (v _continuous_read_loop pred .Serial): Typ 'pyserial_module': {type(pyserial_module)}")
             if hasattr(pyserial_module, 'Serial'):
                 print(f"DEBUG (v _continuous_read_loop pred .Serial): 'pyserial_module.Serial' existuje.")
             else:
                 print(f"DEBUG (v _continuous_read_loop pred .Serial): 'pyserial_module' NEMÁ atribút 'Serial'!")
-            # --- Koniec diagnostiky ---
+           
 
-            # Použijeme alias 'pyserial_module'
-            ser_connection = pyserial_module.Serial(SERIAL_PORT, BAUD_RATE, timeout=1) # <<< ZMENA: Používame alias
+            #Nastavenie na spojenie s arduinom
+            ser_connection = pyserial_module.Serial(SERIAL_PORT, BAUD_RATE, timeout=1) 
             
             # Bezpečnejší prístup k ser_connection.name
             port_name = SERIAL_PORT 
@@ -52,7 +55,8 @@ def _continuous_read_loop():
                 port_name = ser_connection.name
             print(f"ARDUINO_READER: Pripojené k {port_name}.")
             time.sleep(2)
-
+            
+            #Spustenie prijimania dat z arduina
             while not stop_reading_flag.is_set():
                 if ser_connection and ser_connection.is_open and ser_connection.in_waiting > 0:
                     try:
@@ -60,20 +64,23 @@ def _continuous_read_loop():
                         if line:
                             parse_arduino_data(line)
                     except UnicodeDecodeError:
-                        pass # Ignoruj chyby dekódovania
-                    except Exception: # Chyba pri čítaní z už otvoreného portu
-                        break # Preruší vnútornú slučku, vonkajšia sa pokúsi znova pripojiť
-                elif ser_connection and not ser_connection.is_open: # Ak sa port medzitým zatvoril
-                    break # Preruší vnútornú slučku
-                else: # Žiadne dáta alebo port nie je pripravený
+                        pass 
+                    except Exception: 
+                        break 
+                elif ser_connection and not ser_connection.is_open:
+                    break 
+                else: 
                     time.sleep(0.1)
 
-        except pyserial_module.SerialException as se: # <<< ZMENA: Používame alias pre typ výnimky
+        #Neuspesne pripojenie a opakovany pokus o pripojenie v ramci 5s
+        except pyserial_module.SerialException as se: 
             print(f"ARDUINO_READER: Chyba sériového portu: {se}. Skúsim znova o 5s.")
             if ser_connection and ser_connection.is_open:
                 ser_connection.close()
             ser_connection = None 
             time.sleep(5)
+
+        #Neocakavane chyby a pokus o pripojenie v ramci 5s
         except Exception as e_general: 
             print(f"ARDUINO_READER: Neočakávaná chyba v hlavnej čítacej slučke: {e_general}") 
             print(f"ARDUINO_READER: Typ chyby: {type(e_general)}") 
@@ -88,7 +95,7 @@ def _continuous_read_loop():
         ser_connection.close()
     print("ARDUINO_READER: Slučka na čítanie dát z Arduina bola ukončená.")
 
-
+#Funkcia na bezpecnu inicializaciu spojenia s arduinom
 def start_arduino_reading():
     global serial_thread
     if serial_thread is None or not serial_thread.is_alive():
@@ -99,6 +106,7 @@ def start_arduino_reading():
     else:
         print("ARDUINO_READER: Vlákno na čítanie už beží.")
 
+#Funkcia na bezpecne ukoncenie spojenia s arduinom
 def stop_arduino_reading():
     global serial_thread
     print("ARDUINO_READER: Prijatá požiadavka na zastavenie čítania z Arduina.")

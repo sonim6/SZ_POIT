@@ -3,3 +3,9 @@
 
 #kompilovane subory
 __pycache__/
+
+#json subor
+data_log.json
+
+#databaza
+data_sessions.db

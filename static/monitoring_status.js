@@ -1,8 +1,11 @@
 document.addEventListener('DOMContentLoaded', function() {
+    //Elementy HTML tlacidla 
     const startButton = document.getElementById('startButton');
     const stopButton = document.getElementById('stopButton'); 
 
+    
     startButton.addEventListener('click', () => {
+      //Odoslanie poziadavky pre spustenie monitorovania 
         fetch('/status', {
             method: 'POST',
             headers: {
@@ -17,6 +20,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     stopButton.addEventListener('click', () => {
+      //Odoslanie poziadavky pre zastavenie monitorovania 
         fetch('/status', {
             method: 'POST',
             headers: {
